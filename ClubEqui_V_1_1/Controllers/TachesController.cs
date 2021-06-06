@@ -33,6 +33,49 @@ namespace ClubEqui_V_1_1.Controllers
             return (CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(date, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday));
         }
 
+        // GET: api/Taches/BydateNMonitor
+        [HttpGet]
+        [Route("BydateNMonitor")]
+        public async Task<ActionResult<Taches_List>> BydateNMonitor(DateTime date,int id)
+        {
+            Taches_List taches_List = new Taches_List();
+            taches_List.Taches = await (from t in _context.Taches
+                                        where t.DateDebut.Value.Day == date.Day && t.DateDebut.Value.Month == date.Month && t.DateDebut.Value.Year == date.Year && t.UserAttached==id
+                                        select new Tach_Helper()
+                                        {
+                                            IdTask = t.IdTask,
+                                            Title = t.Title,
+                                            DateDebut = t.DateDebut,
+                                            DureeMinutes = t.DureeMinutes,
+                                            IsDone = t.IsDone,
+                                            UserAttached = t.UserAttached + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur == t.UserAttached select u.Nom).FirstOrDefault()
+                                        }).ToListAsync();
+            return taches_List;
+        }
+
+        //GET: api/Taches/ByWeByweekNMonitorek
+        [HttpGet]
+        [Route("ByweekNMonitor")]
+        public async Task<ActionResult> ByweekNMonitor(int id)
+        {
+            var req = await (_context.Taches.FromSqlRaw($"SELECT t.IdTask,t.Title,t.DateDebut,t.DureeMinutes,t.IsDone,t.userAttached,t.description " +
+                                                            $"FROM Taches t" +
+                                                            $" WHERE DATEDIFF(ww, DATEADD(dd,-1,t.DateDebut), DATEADD(dd,-1,getdate())) = 0 and t.UserAttached="+id).ToListAsync());
+            var res = (from t in req
+                       select new
+                       {
+                           idTask = t.IdTask,
+                           title = t.Title,
+                           dateDebut = t.DateDebut,
+                           dureeMinutes = t.DureeMinutes,
+                           description = t.Description,
+                           isDone = t.IsDone,
+                           userAttached = t.UserAttached + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur == t.UserAttached select u.Nom).FirstOrDefault()
+                       });
+
+            return Ok(res.ToList());
+        }
+
         // GET: api/Taches/ByUser
         [HttpGet]
         [Route("ByUser/{id}")]
@@ -122,7 +165,8 @@ namespace ClubEqui_V_1_1.Controllers
                           DateDebut=t.DateDebut,
                           DureeMinutes=t.DureeMinutes,
                           IsDone=t.IsDone,
-                          UserAttached= t.UserAttached + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur==t.UserAttached select u.Nom).FirstOrDefault()                         
+                          Description=t.Description,
+                          UserAttached = t.UserAttached + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur==t.UserAttached select u.Nom).FirstOrDefault()                         
                       }).ToListAsync();
             return taches_List;
         }        

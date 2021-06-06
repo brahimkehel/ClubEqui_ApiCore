@@ -20,6 +20,69 @@ namespace ClubEqui_V_1_1.Controllers
             _context = context;
         }
 
+        //GET: api/Seances/statisticsForMonitor
+        [HttpGet]
+        [Route("statisticsForMonitor")]
+        public async Task<ActionResult> statisticsForMonitor(int id)
+        {
+            var req_seances_per_week = await (_context.Seances.FromSqlRaw($"SELECT * " +
+                                                           $"FROM Seance s" +
+                                                           $" WHERE DATEDIFF(ww, DATEADD(dd,-1,s.DateDebut), DATEADD(dd,-1,getdate())) = 0 and s.IdMoniteur=" + id).ToListAsync());
+
+            var req_taches_per_week = await (_context.Taches.FromSqlRaw($"SELECT * " +
+                                                           $"FROM Taches t" +
+                                                           $" WHERE DATEDIFF(ww, DATEADD(dd,-1,t.DateDebut), DATEADD(dd,-1,getdate())) = 0 and t.UserAttached=" + id).ToListAsync());
+
+            return Ok(new { nb_taches_per_week = req_taches_per_week.Count, nb_seances_per_week=req_seances_per_week.Count });
+        }
+
+        // GET: api/Seances/BydateNMonitor
+        [HttpGet]
+        [Route("BydateNMonitor")]
+        public async Task<ActionResult<Seance_List>> BydateNMonitor(DateTime date, int id)
+        {
+            Seance_List seance_List = new Seance_List();
+            seance_List.Seances = await (from t in _context.Seances
+                                         where t.IdMoniteur == id && t.DateDebut.Value.Day == date.Day && t.DateDebut.Value.Month == date.Month && t.DateDebut.Value.Year == date.Year
+                                         select new Seance_Helper()
+                                         {
+                                             IdSeance = t.IdSeance,
+                                             IdMoniteur = t.IdMoniteur + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur == t.IdMoniteur select u.Nom).FirstOrDefault(),
+                                             IdClient = t.IdClient + "-" + (from c in _context.Clients where c.IdClient == t.IdClient select c.Nom).FirstOrDefault(),
+                                             IdPayement = t.IdPayement,
+                                             Commentaires = t.Commentaires,
+                                             DateDebut = t.DateDebut,
+                                             DureeMinutes = t.DureeMinutes,
+                                             IsDone = t.IsDone
+                                         }).ToListAsync();
+            return seance_List;
+        }
+
+        //GET: api/Seances/ByWeekNMonitor
+        [HttpGet]
+        [Route("ByWeekNMonitor")]
+        public async Task<ActionResult> ByWeekNMonitor(int id)
+        {
+            var req = await (_context.Seances.FromSqlRaw($"SELECT * " +
+                                                            $"FROM Seance s" +
+                                                            $" WHERE DATEDIFF(ww, DATEADD(dd,-1,s.DateDebut), DATEADD(dd,-1,getdate())) = 0 and s.IdMoniteur=" + id).ToListAsync());
+            var res = (from t in req
+                       select new Seance_Helper
+                       {
+                           IdSeance = t.IdSeance,
+                           IdMoniteur = t.IdMoniteur + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur == t.IdMoniteur select u.Nom).FirstOrDefault(),
+                           IdClient = t.IdClient + "-" + (from c in _context.Clients where c.IdClient == t.IdClient select c.Nom).FirstOrDefault(),
+                           IdPayement = t.IdPayement,
+                           Commentaires = t.Commentaires,
+                           DateDebut = t.DateDebut,
+                           DureeMinutes = t.DureeMinutes,
+                           IsDone = t.IsDone
+                       });
+            Seance_List seance_List = new Seance_List();
+            seance_List.Seances = res.ToList();
+            return Ok(seance_List);
+        }
+
         //GET: api/Seances/statistics
         [HttpGet]
         [Route("statistics")]
@@ -30,14 +93,14 @@ namespace ClubEqui_V_1_1.Controllers
             return Ok(new { nb_perday=req.Count });
         }
 
-        //GET: api/Seances/ByDay
+        //GET: api/Seances/ByUser
         [HttpGet]
         [Route("ByUser")]
         public async Task<ActionResult<Seance_List>> ByUser(int id)
         {
             Seance_List seance_List = new Seance_List();
             seance_List.Seances = await (from s in _context.Seances
-                                         where s.IdMoniteur==id
+                                         where s.IdMoniteur==id 
                                          select new Seance_Helper()
                                          {
                                              IdSeance = s.IdSeance,
@@ -49,6 +112,28 @@ namespace ClubEqui_V_1_1.Controllers
                                              DureeMinutes = s.DureeMinutes,
                                              IsDone = s.IsDone
 
+                                         }).ToListAsync();
+            return seance_List;
+        }
+
+        // GET: api/Seances/BydateNUser
+        [HttpGet]
+        [Route("BydateNUser")]
+        public async Task<ActionResult<Seance_List>> BydateNUser(DateTime date,int id)
+        {
+            Seance_List seance_List = new Seance_List();
+            seance_List.Seances = await (from t in _context.Seances
+                                         where t.IdClient == id && t.DateDebut.Value.Day == date.Day && t.DateDebut.Value.Month == date.Month && t.DateDebut.Value.Year == date.Year
+                                         select new Seance_Helper()
+                                         {
+                                             IdSeance = t.IdSeance,
+                                             IdMoniteur = t.IdMoniteur + "-" + (from u in _context.Utilisateurs where u.IdUtilisateur == t.IdMoniteur select u.Nom).FirstOrDefault(),
+                                             IdClient = t.IdClient + "-" + (from c in _context.Clients where c.IdClient == t.IdClient select c.Nom).FirstOrDefault(),
+                                             IdPayement = t.IdPayement,
+                                             Commentaires = t.Commentaires,
+                                             DateDebut = t.DateDebut,
+                                             DureeMinutes = t.DureeMinutes,
+                                             IsDone = t.IsDone
                                          }).ToListAsync();
             return seance_List;
         }
@@ -248,7 +333,7 @@ namespace ClubEqui_V_1_1.Controllers
                 }
                 if (i == repetition)
                 {
-                    return Ok("added");
+                    return Ok();
                 }
                 else
                 {

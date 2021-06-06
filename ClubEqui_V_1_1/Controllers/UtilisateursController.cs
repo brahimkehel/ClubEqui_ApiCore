@@ -32,7 +32,7 @@ namespace ClubEqui_V_1_1.Controllers
                 Utilisateur_List list = new Utilisateur_List();
                 var user =await (from u in _context.Utilisateurs
                                     where
-                                    u.Email == utilisateur.Email && u.MotPasse == utilisateur.MotPasse && u.TypeUtilsateur.ToLower()=="administrateur"
+                                    u.Email == utilisateur.Email && u.MotPasse == utilisateur.MotPasse
                             select u).FirstOrDefaultAsync();
                 if(user!=null)
                 {
